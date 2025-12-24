@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord des Avancements NR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #f1f5f9;
+            padding: 32px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 18px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .control-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .control-panel h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-panel h3.blue { color: #60a5fa; }
+        .control-panel h3.purple { color: #a78bfa; }
+        .control-panel h3.pink { color: #f472b6; }
+
+        .quick-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn-all {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-all:hover { background: rgba(96, 165, 250, 0.4); }
+
+        .btn-none {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-none:hover { background: rgba(248, 113, 113, 0.4); }
+
+        .person-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .person-btn {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background: rgba(51, 65, 85, 0.5);
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .person-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .person-btn.selected {
+            transform: scale(1.02);
+        }
+
+        .type-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .type-btn {
+            padding: 14px 20px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background: rgba(51, 65, 85, 0.5);
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .type-btn:hover { background: rgba(51, 65, 85, 0.8); }
+
+        .type-btn.selected {
+            border-color: #a78bfa;
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .period-field {
+            flex: 1;
+        }
+
+        .period-field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .period-field select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid rgba(244, 114, 182, 0.3);
+            background: rgba(51, 65, 85, 0.8);
+            color: #f1f5f9;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .period-arrow {
+            color: #f472b6;
+            font-size: 24px;
+            margin-top: 24px;
+        }
+
+        .chart-container {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .chart-title {
+            margin-bottom: 24px;
+            color: #f1f5f9;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chart-badge {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+
+        .chart-wrapper {
+            height: 450px;
+            position: relative;
+        }
+
+        .no-data {
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 18px;
+        }
+
+        .summary {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .summary-card .name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            color: #f1f5f9;
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .summary-card .label {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .summary-card .progression {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .progression.positive { color: #4ade80; }
+        .progression.neutral { color: #94a3b8; }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Tableau de Bord des Avancements</h1>
+        <p>Visualisation des NR cumulés par collaborateur</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-panel">
+            <h3 class="blue">👥 Collaborateurs</h3>
+            <div class="quick-buttons">
+                <button class="btn-all" onclick="selectAll()">Tous</button>
+                <button class="btn-none" onclick="selectNone()">Aucun</button>
+            </div>
+            <div class="person-buttons" id="personButtons"></div>
+        </div>
+
+        <div class="control-panel">
+            <h3 class="purple">📈 Type d'Avancement</h3>
+            <div class="type-buttons">
+                <button class="type-btn selected" data-type="cumule" onclick="setType('cumule')">
+                    🎯 Total cumulé (AAC + Autre)
+                </button>
+                <button class="type-btn" data-type="aac" onclick="setType('aac')">
+                    ⭐ NR Au Choix uniquement
+                </button>
+                <button class="type-btn" data-type="autre" onclick="setType('autre')">
+                    🔄 NR Autre uniquement
+                </button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <h3 class="pink">📅 Période d'Observation</h3>
+            <div class="period-selector">
+                <div class="period-field">
+                    <label>Début</label>
+                    <select id="startYear" onchange="updateChart()"></select>
+                </div>
+                <div class="period-arrow">→</div>
+                <div class="period-field">
+                    <label>Fin</label>
+                    <select id="endYear" onchange="updateChart()"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-title">
+            <span class="chart-badge" id="chartBadge">🎯 Total</span>
+            <span id="chartTitleText">Évolution des NR cumulés (2005 - 2025)</span>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="mainChart"></canvas>
+        </div>
+        <div class="no-data" id="noData" style="display: none;">
+            👆 Sélectionnez au moins un collaborateur pour afficher le graphique
+        </div>
+    </div>
+
+    <div class="summary" id="summary"></div>
+
+    <div class="footer">
+        💡 Les NR sont cumulés depuis le début des données disponibles pour chaque collaborateur
+    </div>
+
+    <script>
+        // Données extraites du fichier Excel
+        const rawData = {
+            "Mathias": { "NR_AAC": { 2012: 0, 2013: 1, 2014: 1, 2015: 0, 2016: 0, 2017: 1, 2018: 0, 2019: 0, 2020: 1, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 0 }, "NR_autre": { 2012: 0, 2013: 0, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 2, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Guillaume": { "NR_AAC": { 2006: 0, 2007: 0, 2008: 0, 2009: 0, 2010: 0, 2011: 0, 2012: 0, 2013: 1, 2014: 2, 2015: 0, 2016: 0, 2017: 1, 2018: 0, 2019: 0, 2020: 1, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 0 }, "NR_autre": { 2006: 0, 2007: 2, 2008: 0, 2009: 0, 2010: 14, 2011: 0, 2012: 0, 2013: 0, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 2, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Nicolas": { "NR_AAC": { 2005: 0, 2006: 0, 2007: 0, 2008: 0, 2009: 0, 2010: 0, 2011: 0, 2012: 0, 2013: 0, 2014: 0, 2015: 0, 2016: 0, 2017: 1, 2018: 0, 2019: 2, 2020: 1, 2021: 1, 2022: 0, 2023: 0, 2024: 0, 2025: 1 }, "NR_autre": { 2005: 0, 2006: 2, 2007: 0, 2008: 0, 2009: 2, 2010: 0, 2011: 2, 2012: 0, 2013: 2, 2014: 0, 2015: 2, 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Nadège": { "NR_AAC": { 2005: 0, 2006: 2, 2007: 0, 2008: 1, 2009: 0, 2010: 1, 2011: 0, 2012: 2, 2013: 0, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 1, 2019: 0, 2020: 1, 2021: 0, 2022: 0, 2023: 2, 2024: 0, 2025: 1 }, "NR_autre": { 2005: 0, 2006: 0, 2007: 0, 2008: 0, 2009: 0, 2010: 0, 2011: 0, 2012: 0, 2013: 2, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Marc": { "NR_AAC": { 2005: 0, 2006: 0, 2007: 0, 2008: 0, 2009: 0, 2010: 0, 2011: 2, 2012: 1, 2013: 0, 2014: 0, 2015: 0, 2016: 1, 2017: 0, 2018: 1, 2019: 0, 2020: 3, 2021: 0, 2022: 1, 2023: 0, 2024: 1, 2025: 0 }, "NR_autre": { 2005: 0, 2006: 0, 2007: 2, 2008: 0, 2009: 2, 2010: 0, 2011: 0, 2012: 0, 2013: 2, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Stéphane": { "NR_AAC": { 2005: 0, 2006: 0, 2007: 0, 2008: 1, 2009: 0, 2010: 0, 2011: 2, 2012: 0, 2013: 0, 2014: 1, 2015: 0, 2016: 0, 2017: 0, 2018: 0, 2019: 1, 2020: 0, 2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 0 }, "NR_autre": { 2005: 0, 2006: 2, 2007: 0, 2008: 0, 2009: 2, 2010: 0, 2011: 2, 2012: 0, 2013: 0, 2014: 0, 2015: 0, 2016: 2, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } },
+            "Cédric": { "NR_AAC": { 2008: 0, 2009: 2, 2010: 1, 2011: 0, 2012: 0, 2013: 1, 2014: 1, 2015: 0, 2016: 1, 2017: 0, 2018: 2, 2019: 1, 2020: 1, 2021: 0, 2022: 0, 2023: 0, 2024: 1, 2025: 0 }, "NR_autre": { 2008: 0, 2009: 2, 2010: 0, 2011: 0, 2012: 0, 2013: 2, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 3, 2023: 1, 2024: 0, 2025: 1 } },
+            "Ludovic": { "NR_AAC": { 2005: 0, 2006: 2, 2007: 0, 2008: 0, 2009: 2, 2010: 0, 2011: 0, 2012: 1, 2013: 0, 2014: 0, 2015: 0, 2016: 1, 2017: 0, 2018: 1, 2019: 0, 2020: 2, 2021: 0, 2022: 1, 2023: 1 }, "NR_autre": { 2005: 0, 2006: 0, 2007: 2, 2008: 0, 2009: 0, 2010: 2, 2011: 0, 2012: 0, 2013: 2, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 0, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1 } },
+            "Bruno": { "NR_AAC": { 2005: 0, 2006: 0, 2007: 0, 2008: 0, 2009: 0, 2010: 0, 2011: 2, 2012: 0, 2013: 0, 2014: 1, 2015: 0, 2016: 1, 2017: 1, 2018: 1, 2019: 0, 2020: 1, 2021: 0, 2022: 1, 2023: 1, 2024: 1, 2025: 1 }, "NR_autre": { 2005: 0, 2006: 2, 2007: 0, 2008: 0, 2009: 2, 2010: 0, 2011: 0, 2012: 0, 2013: 2, 2014: 0, 2015: 0, 2016: 0, 2017: 0, 2018: 2, 2019: 0, 2020: 0, 2021: 0, 2022: 0, 2023: 1, 2024: 0, 2025: 1 } }
+        };
+
+        const personnes = Object.keys(rawData);
+        const colors = [
+            '#e63946', '#2a9d8f', '#e9c46a', '#264653', '#f4a261',
+            '#a855f7', '#06b6d4', '#84cc16', '#f97316'
+        ];
+
+        // Calculer toutes les années disponibles
+        const allYears = [...new Set(
+            personnes.flatMap(p => [
+                ...Object.keys(rawData[p].NR_AAC),
+                ...Object.keys(rawData[p].NR_autre)
+            ].map(Number))
+        )].sort((a, b) => a - b);
+
+        // État de l'application
+        let selectedPersonnes = ['Mathias', 'Guillaume', 'Nicolas'];
+        let typeAvancement = 'cumule';
+        let startYear = 2005;
+        let endYear = 2025;
+        let chart = null;
+
+        // Initialisation
+        function init() {
+            renderPersonButtons();
+            renderYearSelects();
+            updateChart();
+        }
+
+        function renderPersonButtons() {
+            const container = document.getElementById('personButtons');
+            container.innerHTML = personnes.map((p, idx) => `
+                <button class="person-btn ${selectedPersonnes.includes(p) ? 'selected' : ''}" 
+                        data-person="${p}"
+                        onclick="togglePerson('${p}')"
+                        style="${selectedPersonnes.includes(p) ? 
+                            `border-color: ${colors[idx]}; background: ${colors[idx]}22; color: ${colors[idx]};` : 
+                            ''}">
+                    ${p}
+                </button>
+            `).join('');
+        }
+
+        function renderYearSelects() {
+            const startSelect = document.getElementById('startYear');
+            const endSelect = document.getElementById('endYear');
+
+            startSelect.innerHTML = allYears
+                .filter(y => y < endYear)
+                .map(y => `<option value="${y}" ${y === startYear ? 'selected' : ''}>${y}</option>`)
+                .join('');
+
+            endSelect.innerHTML = allYears
+                .filter(y => y > startYear)
+                .map(y => `<option value="${y}" ${y === endYear ? 'selected' : ''}>${y}</option>`)
+                .join('');
+        }
+
+        function togglePerson(person) {
+            if (selectedPersonnes.includes(person)) {
+                selectedPersonnes = selectedPersonnes.filter(p => p !== person);
+            } else {
+                selectedPersonnes.push(person);
+            }
+            renderPersonButtons();
+            updateChart();
+        }
+
+        function selectAll() {
+            selectedPersonnes = [...personnes];
+            renderPersonButtons();
+            updateChart();
+        }
+
+        function selectNone() {
+            selectedPersonnes = [];
+            renderPersonButtons();
+            updateChart();
+        }
+
+        function setType(type) {
+            typeAvancement = type;
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.type === type);
+            });
+            updateChart();
+        }
+
+        function calculateCumulativeData() {
+            const years = allYears.filter(y => y >= startYear && y <= endYear);
+            const datasets = [];
+
+            selectedPersonnes.forEach(personne => {
+                const data = rawData[personne];
+                const cumulValues = [];
+
+                const dataStartYear = Math.min(
+                    ...Object.keys(data.NR_AAC).map(Number),
+                    ...Object.keys(data.NR_autre).map(Number)
+                );
+
+                years.forEach(year => {
+                    let cumul = 0;
+                    for (let y = dataStartYear; y <= year; y++) {
+                        if (typeAvancement === 'aac' || typeAvancement === 'cumule') {
+                            cumul += data.NR_AAC[y] || 0;
+                        }
+                        if (typeAvancement === 'autre' || typeAvancement === 'cumule') {
+                            cumul += data.NR_autre[y] || 0;
+                        }
+                    }
+                    cumulValues.push(cumul);
+                });
+
+                const colorIdx = personnes.indexOf(personne);
+                datasets.push({
+                    label: personne,
+                    data: cumulValues,
+                    borderColor: colors[colorIdx],
+                    backgroundColor: colors[colorIdx] + '33',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: colors[colorIdx],
+                    tension: 0.1,
+                    fill: false
+                });
+            });
+
+            return { labels: years, datasets };
+        }
+
+        function updateChart() {
+            startYear = parseInt(document.getElementById('startYear').value);
+            endYear = parseInt(document.getElementById('endYear').value);
+            renderYearSelects();
+
+            const chartWrapper = document.querySelector('.chart-wrapper');
+            const noData = document.getElementById('noData');
+            const canvas = document.getElementById('mainChart');
+
+            // Mise à jour du titre
+            const badges = { cumule: '🎯 Total', aac: '⭐ AAC', autre: '🔄 Autre' };
+            document.getElementById('chartBadge').textContent = badges[typeAvancement];
+            document.getElementById('chartTitleText').textContent = 
+                `Évolution des NR cumulés (${startYear} - ${endYear})`;
+
+            if (selectedPersonnes.length === 0) {
+                canvas.style.display = 'none';
+                noData.style.display = 'flex';
+                updateSummary([]);
+                return;
+            }
+
+            canvas.style.display = 'block';
+            noData.style.display = 'none';
+
+            const chartData = calculateCumulativeData();
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(canvas, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { size: 13, weight: '600' },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#f1f5f9',
+                            borderColor: 'rgba(148, 163, 184, 0.2)',
+                            borderWidth: 1,
+                            padding: 16,
+                            cornerRadius: 12,
+                            titleFont: { size: 16, weight: '700' },
+                            bodyFont: { size: 14 },
+                            callbacks: {
+                                title: (items) => `Année ${items[0].label}`,
+                                label: (item) => `${item.dataset.label}: ${item.raw} NR`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { color: '#94a3b8', font: { size: 13, weight: '500' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { color: '#94a3b8', font: { size: 13, weight: '500' } },
+                            title: {
+                                display: true,
+                                text: 'NR cumulés',
+                                color: '#94a3b8',
+                                font: { size: 14 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            updateSummary(chartData.datasets);
+        }
+
+        function updateSummary(datasets) {
+            const container = document.getElementById('summary');
+
+            if (datasets.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = datasets.map(ds => {
+                const colorIdx = personnes.indexOf(ds.label);
+                const lastValue = ds.data[ds.data.length - 1] || 0;
+                const firstValue = ds.data[0] || 0;
+                const progression = lastValue - firstValue;
+
+                return `
+                    <div class="summary-card" style="
+                        background: linear-gradient(135deg, ${colors[colorIdx]}15, ${colors[colorIdx]}05);
+                        border: 1px solid ${colors[colorIdx]}40;
+                    ">
+                        <div class="name" style="color: ${colors[colorIdx]};">${ds.label}</div>
+                        <div class="value">${lastValue}</div>
+                        <div class="label">NR cumulés en ${endYear}</div>
+                        <div class="progression ${progression > 0 ? 'positive' : 'neutral'}">
+                            ${progression > 0 ? '+' : ''}${progression} sur la période
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Lancer l'application
+        init();
+    </script>
+</body>
+</html>
